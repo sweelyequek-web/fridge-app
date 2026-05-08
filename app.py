@@ -125,7 +125,7 @@ RECIPE_SCHEMA = {
 
 @st.cache_resource
 def get_client():
-    api_key = os.environ.get("GEMINI_API_KEY")
+    api_key = os.environ.get("GEMINI_API_KEY") or st.secrets.get("GEMINI_API_KEY")
     if not api_key:
         st.error(
             "GEMINI_API_KEY environment variable not set. "
