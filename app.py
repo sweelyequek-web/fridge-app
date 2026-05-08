@@ -186,13 +186,268 @@ def generate_recipes(ingredients: list[str], servings: int, dietary: str) -> dic
 
 
 # ---------------------------------------------------------------------------
+# App icon (generated once at startup)
+# ---------------------------------------------------------------------------
+
+def _ensure_app_icon() -> str:
+    from PIL import Image, ImageDraw
+
+    icon_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
+    icon_path = os.path.join(icon_dir, "apple-touch-icon.png")
+
+    if os.path.exists(icon_path):
+        return icon_path
+
+    os.makedirs(icon_dir, exist_ok=True)
+
+    SIZE = 512
+    img = Image.new("RGBA", (SIZE, SIZE), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+
+    draw.rounded_rectangle([0, 0, SIZE - 1, SIZE - 1], radius=100, fill="#1F3D2D")
+
+    fridge_w, fridge_h = int(SIZE * 0.55), int(SIZE * 0.70)
+    fx, fy = (SIZE - fridge_w) // 2, int(SIZE * 0.14)
+    fx2, fy2 = fx + fridge_w, fy + fridge_h
+
+    draw.rounded_rectangle([fx - 6, fy - 6, fx2 + 6, fy2 + 6], radius=18, fill="#FFFFFF")
+    draw.rounded_rectangle([fx, fy, fx2, fy2], radius=12, fill="#F0EBE3")
+
+    fz_h = int(fridge_h * 0.30)
+    draw.rounded_rectangle([fx, fy, fx2, fy + fz_h], radius=12, fill="#D6EAF8")
+    draw.rectangle([fx, fy + fz_h - 3, fx2, fy + fz_h + 3], fill="#FFFFFF")
+
+    shelf_section = fridge_h - fz_h
+    for i in (1, 2):
+        sy = fy + fz_h + int(shelf_section * i / 3)
+        draw.rectangle([fx + 12, sy - 3, fx2 - 12, sy + 3], fill="#FFFFFF")
+
+    hx = fx2 - 20
+    ht = fy + fz_h + int(shelf_section * 0.2)
+    hb = ht + int(shelf_section * 0.3)
+    draw.rounded_rectangle([hx, ht, hx + 10, hb], radius=5, fill="#FFFFFF")
+
+    dot_cx, dot_cy, dot_r = int(SIZE * 0.734), int(SIZE * 0.22), 44
+    draw.ellipse([dot_cx - dot_r, dot_cy - dot_r, dot_cx + dot_r, dot_cy + dot_r], fill="#E76F51")
+
+    final = Image.new("RGB", (SIZE, SIZE), "#1F3D2D")
+    final.paste(img, mask=img.split()[3])
+    final.save(icon_path, "PNG", optimize=True)
+
+    return icon_path
+
+
+_APP_ICON_PATH = _ensure_app_icon()
+
+# ---------------------------------------------------------------------------
 # UI
 # ---------------------------------------------------------------------------
 
 st.set_page_config(
     page_title="Smart Fridge Recipe Finder",
-    page_icon="🍳",
+    page_icon=_APP_ICON_PATH,
     layout="centered",
+)
+
+st.markdown(
+    """
+<link rel="apple-touch-icon" sizes="512x512" href="/app/static/apple-touch-icon.png">
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600&display=swap');
+
+div[data-testid="stAppViewContainer"] {
+    background-color: #FAF7F2;
+}
+
+div[data-testid="stDecoration"] {
+    display: none;
+}
+
+div[data-testid="stHeader"] {
+    background: transparent;
+}
+
+.main .block-container {
+    max-width: 760px;
+    padding-top: 2.5rem;
+    padding-bottom: 4rem;
+    padding-left: 2rem;
+    padding-right: 2rem;
+}
+
+h1 {
+    font-family: 'Playfair Display', Georgia, serif !important;
+    font-size: 2.4rem !important;
+    font-weight: 700 !important;
+    color: #1F3D2D !important;
+    letter-spacing: -0.5px;
+    margin-bottom: 0.25rem !important;
+}
+
+h2, h3 {
+    font-family: 'Playfair Display', Georgia, serif !important;
+    color: #1F3D2D !important;
+    border-left: 4px solid #2D6A4F;
+    padding-left: 0.65rem;
+    margin-top: 1.8rem !important;
+    margin-bottom: 0.5rem !important;
+}
+
+p, li, .stMarkdown, label, .stCaption {
+    font-family: 'Inter', system-ui, sans-serif !important;
+    color: #374151;
+}
+
+.stCaption, small {
+    color: #6B7280 !important;
+    font-size: 0.875rem !important;
+}
+
+.stButton > button {
+    font-family: 'Inter', system-ui, sans-serif !important;
+    font-weight: 600;
+    font-size: 0.95rem;
+    border-radius: 50px;
+    padding: 0.6rem 2rem;
+    border: none !important;
+    background: linear-gradient(135deg, #2D6A4F 0%, #52B788 100%) !important;
+    color: #FFFFFF !important;
+    box-shadow: 0 2px 8px rgba(45, 106, 79, 0.30);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    width: 100%;
+}
+
+.stButton > button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(45, 106, 79, 0.40) !important;
+    background: linear-gradient(135deg, #245c43 0%, #40a875 100%) !important;
+}
+
+.stButton > button:active {
+    transform: translateY(0px);
+    box-shadow: 0 2px 6px rgba(45, 106, 79, 0.25) !important;
+}
+
+.stButton > button:disabled {
+    background: #C8D8C8 !important;
+    box-shadow: none;
+    transform: none;
+    cursor: not-allowed;
+}
+
+div[data-testid="stFileUploader"] {
+    border: 2px dashed #2D6A4F;
+    border-radius: 16px;
+    background-color: #F4F9F6;
+    padding: 1rem;
+    transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+div[data-testid="stFileUploader"]:hover {
+    border-color: #52B788;
+    background-color: #EAF4EE;
+}
+
+div[data-testid="stFileUploader"] label {
+    color: #2D6A4F !important;
+    font-weight: 500;
+}
+
+.stTextArea textarea {
+    border-radius: 12px !important;
+    border: 1.5px solid #E8DDD0 !important;
+    background-color: #FDFAF6 !important;
+    color: #1F3D2D !important;
+    font-family: 'Inter', system-ui, sans-serif !important;
+    font-size: 0.95rem !important;
+    padding: 0.75rem !important;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.stTextArea textarea:focus {
+    border-color: #2D6A4F !important;
+    box-shadow: 0 0 0 3px rgba(45, 106, 79, 0.15) !important;
+    outline: none !important;
+}
+
+button[data-baseweb="tab"] {
+    font-family: 'Inter', system-ui, sans-serif !important;
+    font-weight: 600 !important;
+    font-size: 0.9rem !important;
+    border-radius: 50px !important;
+    padding: 0.4rem 1.2rem !important;
+    color: #6B7280 !important;
+    background-color: transparent !important;
+    border: 1.5px solid #E8DDD0 !important;
+    transition: all 0.2s ease;
+}
+
+button[data-baseweb="tab"]:hover {
+    border-color: #2D6A4F !important;
+    color: #2D6A4F !important;
+    background-color: #F4F9F6 !important;
+}
+
+button[data-baseweb="tab"][aria-selected="true"] {
+    background: linear-gradient(135deg, #2D6A4F 0%, #52B788 100%) !important;
+    color: #FFFFFF !important;
+    border-color: transparent !important;
+    box-shadow: 0 3px 10px rgba(45, 106, 79, 0.30);
+}
+
+div[data-testid="metric-container"] {
+    background-color: #FFFFFF;
+    border-radius: 14px;
+    border: 1px solid #E8DDD0;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.07);
+    padding: 1rem 1.25rem !important;
+    text-align: center;
+}
+
+div[data-testid="metric-container"] label {
+    font-family: 'Inter', system-ui, sans-serif !important;
+    font-size: 0.78rem !important;
+    font-weight: 600 !important;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #6B7280 !important;
+}
+
+div[data-testid="metric-container"] div[data-testid="stMetricValue"] {
+    font-family: 'Playfair Display', Georgia, serif !important;
+    font-size: 1.7rem !important;
+    font-weight: 700 !important;
+    color: #2D6A4F !important;
+}
+
+div[data-testid="stAlert"] {
+    border-radius: 12px !important;
+    font-family: 'Inter', system-ui, sans-serif !important;
+}
+
+div[data-testid="stImage"] img {
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.10);
+    border: 1px solid #E8DDD0;
+}
+
+code {
+    background-color: #EAF4EE !important;
+    color: #1F3D2D !important;
+    border-radius: 6px !important;
+    padding: 2px 7px !important;
+    font-size: 0.88em !important;
+    border: 1px solid #C8DDD0 !important;
+}
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #F0EBE3; }
+::-webkit-scrollbar-thumb { background: #2D6A4F; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #52B788; }
+</style>
+""",
+    unsafe_allow_html=True,
 )
 
 st.title("🍳 Smart Fridge Recipe Finder")
