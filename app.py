@@ -12,6 +12,7 @@ import os
 from io import BytesIO
 
 import streamlit as st
+import streamlit.components.v1 as components
 from PIL import Image
 
 try:
@@ -249,32 +250,35 @@ st.set_page_config(
     layout="centered",
 )
 
-st.markdown(
-    """
+components.html("""
 <script>
-    (function() {
-        var head = document.head || document.getElementsByTagName('head')[0];
+    try {
+        var pd = window.parent.document;
+        var head = pd.head;
         if (!head.querySelector('link[rel="apple-touch-icon"]')) {
-            var ati = document.createElement('link');
+            var ati = pd.createElement('link');
             ati.rel = 'apple-touch-icon';
             ati.href = '/app/static/apple-touch-icon.png';
             head.appendChild(ati);
         }
         if (!head.querySelector('meta[name="apple-mobile-web-app-capable"]')) {
-            var cap = document.createElement('meta');
+            var cap = pd.createElement('meta');
             cap.name = 'apple-mobile-web-app-capable';
             cap.content = 'yes';
             head.appendChild(cap);
         }
         if (!head.querySelector('meta[name="apple-mobile-web-app-title"]')) {
-            var title = document.createElement('meta');
-            title.name = 'apple-mobile-web-app-title';
-            title.content = 'Fridge Recipes';
-            head.appendChild(title);
+            var t = pd.createElement('meta');
+            t.name = 'apple-mobile-web-app-title';
+            t.content = 'Fridge Recipes';
+            head.appendChild(t);
         }
-    })();
+    } catch(e) {}
 </script>
+""", height=0)
 
+st.markdown(
+    """
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600&display=swap');
 
