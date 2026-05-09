@@ -251,7 +251,29 @@ st.set_page_config(
 
 st.markdown(
     """
-<link rel="apple-touch-icon" sizes="512x512" href="/app/static/apple-touch-icon.png">
+<script>
+    (function() {
+        var head = document.head || document.getElementsByTagName('head')[0];
+        if (!head.querySelector('link[rel="apple-touch-icon"]')) {
+            var ati = document.createElement('link');
+            ati.rel = 'apple-touch-icon';
+            ati.href = '/app/static/apple-touch-icon.png';
+            head.appendChild(ati);
+        }
+        if (!head.querySelector('meta[name="apple-mobile-web-app-capable"]')) {
+            var cap = document.createElement('meta');
+            cap.name = 'apple-mobile-web-app-capable';
+            cap.content = 'yes';
+            head.appendChild(cap);
+        }
+        if (!head.querySelector('meta[name="apple-mobile-web-app-title"]')) {
+            var title = document.createElement('meta');
+            title.name = 'apple-mobile-web-app-title';
+            title.content = 'Fridge Recipes';
+            head.appendChild(title);
+        }
+    })();
+</script>
 
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600&display=swap');
