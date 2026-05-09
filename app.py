@@ -12,7 +12,6 @@ import os
 from io import BytesIO
 
 import streamlit as st
-import streamlit.components.v1 as components
 from PIL import Image
 
 try:
@@ -190,51 +189,88 @@ def generate_recipes(ingredients: list[str], servings: int, dietary: str) -> dic
 # App icon (generated once at startup)
 # ---------------------------------------------------------------------------
 
+def _patch_streamlit_head() -> None:
+    """Write apple-touch-icon + PWA meta tags into Streamlit's own index.html.
+
+    This is the only reliable way to get tags into <head> in Streamlit — iOS
+    Safari reads apple-touch-icon from the initial HTML, before any JS runs.
+    The patch is idempotent; it skips the write if the tag is already present.
+    """
+    try:
+        import streamlit as _st
+        index_path = os.path.join(
+            os.path.dirname(_st.__file__), "static", "index.html"
+        )
+        with open(index_path, "r", encoding="utf-8") as fh:
+            html = fh.read()
+
+        if "apple-touch-icon" in html:
+            return  # already patched
+
+        injection = (
+            '<link rel="apple-touch-icon" href="/app/static/apple-touch-icon.png">'
+            '<meta name="apple-mobile-web-app-capable" content="yes">'
+            '<meta name="apple-mobile-web-app-title" content="Fridge Recipes">'
+        )
+
+        # Streamlit's index.html is minified; <head> appears as a plain token.
+        if "<head>" in html:
+            html = html.replace("<head>", f"<head>{injection}", 1)
+        elif "</head>" in html:
+            html = html.replace("</head>", f"{injection}</head>", 1)
+        else:
+            return  # can't find insertion point, give up
+
+        with open(index_path, "w", encoding="utf-8") as fh:
+            fh.write(html)
+    except Exception:
+        pass  # no write permission or unexpected structure — degrade gracefully
+
+
 def _ensure_app_icon() -> str:
     from PIL import Image, ImageDraw
 
     icon_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
     icon_path = os.path.join(icon_dir, "apple-touch-icon.png")
 
-    if os.path.exists(icon_path):
-        return icon_path
+    if not os.path.exists(icon_path):
+        os.makedirs(icon_dir, exist_ok=True)
 
-    os.makedirs(icon_dir, exist_ok=True)
+        SIZE = 512
+        img = Image.new("RGBA", (SIZE, SIZE), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(img)
 
-    SIZE = 512
-    img = Image.new("RGBA", (SIZE, SIZE), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(img)
+        draw.rounded_rectangle([0, 0, SIZE - 1, SIZE - 1], radius=100, fill="#1F3D2D")
 
-    draw.rounded_rectangle([0, 0, SIZE - 1, SIZE - 1], radius=100, fill="#1F3D2D")
+        fridge_w, fridge_h = int(SIZE * 0.55), int(SIZE * 0.70)
+        fx, fy = (SIZE - fridge_w) // 2, int(SIZE * 0.14)
+        fx2, fy2 = fx + fridge_w, fy + fridge_h
 
-    fridge_w, fridge_h = int(SIZE * 0.55), int(SIZE * 0.70)
-    fx, fy = (SIZE - fridge_w) // 2, int(SIZE * 0.14)
-    fx2, fy2 = fx + fridge_w, fy + fridge_h
+        draw.rounded_rectangle([fx - 6, fy - 6, fx2 + 6, fy2 + 6], radius=18, fill="#FFFFFF")
+        draw.rounded_rectangle([fx, fy, fx2, fy2], radius=12, fill="#F0EBE3")
 
-    draw.rounded_rectangle([fx - 6, fy - 6, fx2 + 6, fy2 + 6], radius=18, fill="#FFFFFF")
-    draw.rounded_rectangle([fx, fy, fx2, fy2], radius=12, fill="#F0EBE3")
+        fz_h = int(fridge_h * 0.30)
+        draw.rounded_rectangle([fx, fy, fx2, fy + fz_h], radius=12, fill="#D6EAF8")
+        draw.rectangle([fx, fy + fz_h - 3, fx2, fy + fz_h + 3], fill="#FFFFFF")
 
-    fz_h = int(fridge_h * 0.30)
-    draw.rounded_rectangle([fx, fy, fx2, fy + fz_h], radius=12, fill="#D6EAF8")
-    draw.rectangle([fx, fy + fz_h - 3, fx2, fy + fz_h + 3], fill="#FFFFFF")
+        shelf_section = fridge_h - fz_h
+        for i in (1, 2):
+            sy = fy + fz_h + int(shelf_section * i / 3)
+            draw.rectangle([fx + 12, sy - 3, fx2 - 12, sy + 3], fill="#FFFFFF")
 
-    shelf_section = fridge_h - fz_h
-    for i in (1, 2):
-        sy = fy + fz_h + int(shelf_section * i / 3)
-        draw.rectangle([fx + 12, sy - 3, fx2 - 12, sy + 3], fill="#FFFFFF")
+        hx = fx2 - 20
+        ht = fy + fz_h + int(shelf_section * 0.2)
+        hb = ht + int(shelf_section * 0.3)
+        draw.rounded_rectangle([hx, ht, hx + 10, hb], radius=5, fill="#FFFFFF")
 
-    hx = fx2 - 20
-    ht = fy + fz_h + int(shelf_section * 0.2)
-    hb = ht + int(shelf_section * 0.3)
-    draw.rounded_rectangle([hx, ht, hx + 10, hb], radius=5, fill="#FFFFFF")
+        dot_cx, dot_cy, dot_r = int(SIZE * 0.734), int(SIZE * 0.22), 44
+        draw.ellipse([dot_cx - dot_r, dot_cy - dot_r, dot_cx + dot_r, dot_cy + dot_r], fill="#E76F51")
 
-    dot_cx, dot_cy, dot_r = int(SIZE * 0.734), int(SIZE * 0.22), 44
-    draw.ellipse([dot_cx - dot_r, dot_cy - dot_r, dot_cx + dot_r, dot_cy + dot_r], fill="#E76F51")
+        final = Image.new("RGB", (SIZE, SIZE), "#1F3D2D")
+        final.paste(img, mask=img.split()[3])
+        final.save(icon_path, "PNG", optimize=True)
 
-    final = Image.new("RGB", (SIZE, SIZE), "#1F3D2D")
-    final.paste(img, mask=img.split()[3])
-    final.save(icon_path, "PNG", optimize=True)
-
+    _patch_streamlit_head()
     return icon_path
 
 
@@ -249,33 +285,6 @@ st.set_page_config(
     page_icon=_APP_ICON_PATH,
     layout="centered",
 )
-
-components.html("""
-<script>
-    try {
-        var pd = window.parent.document;
-        var head = pd.head;
-        if (!head.querySelector('link[rel="apple-touch-icon"]')) {
-            var ati = pd.createElement('link');
-            ati.rel = 'apple-touch-icon';
-            ati.href = '/app/static/apple-touch-icon.png';
-            head.appendChild(ati);
-        }
-        if (!head.querySelector('meta[name="apple-mobile-web-app-capable"]')) {
-            var cap = pd.createElement('meta');
-            cap.name = 'apple-mobile-web-app-capable';
-            cap.content = 'yes';
-            head.appendChild(cap);
-        }
-        if (!head.querySelector('meta[name="apple-mobile-web-app-title"]')) {
-            var t = pd.createElement('meta');
-            t.name = 'apple-mobile-web-app-title';
-            t.content = 'Fridge Recipes';
-            head.appendChild(t);
-        }
-    } catch(e) {}
-</script>
-""", height=0)
 
 st.markdown(
     """
